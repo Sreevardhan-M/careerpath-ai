@@ -151,6 +151,14 @@ What the AI does: reorders the top three candidates the rule engine produced, wr
 
 Onboarding and sign-in, profile editing, skill CRUD with proficiency, ranked recommendations with explanations, per-career detail pages, skill gap analysis, resource filtering with completed and saved states, a roadmap with persistent task completion, goals with dates, achievements, weekly activity and readiness charts, data export, password change, progress reset and account deletion.
 
+## Deployment (Vercel frontend, Render backend)
+
+The frontend in `public/` is static and the backend is the Node server. In production they run separately:
+
+- **Backend on Render**: `render.yaml` describes the web service (`npm start`, health check `/api/health`). Set `ALLOWED_ORIGINS` to your Vercel site URL, for example `https://your-app.vercel.app`. `COOKIE_SECURE=true` and `TRUST_PROXY=true` are already in the blueprint.
+- **Frontend on Vercel**: `vercel.json` publishes `public/` and rewrites `/api/*` to the Render URL, so the browser only talks to one origin and session cookies stay first-party. If your Render service has a different URL, edit the `destination` in `vercel.json`.
+- **Data persistence**: the app stores data in a SQLite file. Render's free plan has an ephemeral disk, so accounts are erased whenever the service restarts or redeploys. For lasting data, use a paid Render plan with a persistent disk mounted at the folder of `DATABASE_PATH`.
+
 ## Testing
 
 ```bash
