@@ -21,7 +21,7 @@ Engineering students often know some technologies but cannot tell which careers 
 
 ## Key features
 
-- **Landing page and 4-step onboarding**: details, skills with proficiency, learning experience, review and edit, then account creation. Drafts survive a refresh.
+- **Landing page and 5-step onboarding**: account creation first, then details, skills with proficiency, learning experience, and a review with edit. Drafts survive a refresh.
 - **Profile** with completion checklist, editable at any time.
 - **Skill Assessment**: skills grouped into programming, web development, core CS and advanced technologies. Add, edit and remove skills, strongest and weakest summary. Levels are clearly labelled self-reported, never presented as test scores.
 - **Career Recommendations**: 13 careers ranked. The top three are shown in full and every other career can be explored. Each shows why it matches, skills met, skills to add, suggested projects, roadmap outline, resources and a skill coverage indicator.

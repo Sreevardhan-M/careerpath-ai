@@ -4,7 +4,7 @@ import { go, brandMark } from '../nav.js';
 import { field, selectFor } from '../components.js';
 import { choice, chip, fieldset, levelPicker } from '../pickers.js';
 
-const KEY = 'cp_draft_v1';
+const KEY = 'cp_draft_v2';
 const blank = () => ({ step: 0, name: '', college: '', degree: '', year: 0, interests: [], skills: [], projects: [], experience: [], email: '' });
 
 function loadDraft() {
@@ -20,7 +20,7 @@ function dropdown(options, value, placeholder, onChange) {
   return selectFor([{ value: '', label: placeholder }, ...options], value ?? '', { onchange: (e) => onChange(e.target.value) });
 }
 
-const STEP_LABELS = ['Your details', 'Your skills', 'Your experience', 'Review'];
+const STEP_LABELS = ['Account', 'Your details', 'Your skills', 'Your experience', 'Review'];
 const CONFIDENCE = [['', 'Select'], [1, '1: Not confident'], [2, '2: Slightly confident'], [3, '3: Moderately confident'], [4, '4: Confident'], [5, '5: Very confident']].map(([value, label]) => ({ value, label }));
 
 export async function onboardingView() {
@@ -49,13 +49,18 @@ export async function onboardingView() {
   function validate(step) {
     const e = {};
     if (step === 0) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email.trim())) e.email = 'Enter a valid email address.';
+      if (keep.pw.length < 8) e.password = 'Use at least 8 characters.';
+      else if (keep.pw !== keep.pw2) e.confirm = 'Passwords do not match.';
+    }
+    if (step === 1) {
       if (d.name.trim().length < 2) e.name = 'Enter your full name (at least 2 characters).';
       if (!d.college) e.college = 'Choose your college.';
       if (!d.degree) e.degree = 'Choose your degree.';
       if (!d.year) e.year = 'Choose your current academic year.';
       if (!d.interests.length) e.interests = 'Choose at least one interest, or "Not Sure Yet".';
     }
-    if (step === 1) {
+    if (step === 2) {
       const unrated = d.skills.filter((s) => !s.level).map((s) => s.name);
       if (unrated.length) e.skills = `Choose a proficiency level for: ${unrated.join(', ')}.`;
     }
@@ -74,18 +79,33 @@ export async function onboardingView() {
     d.step = i; errors = {}; persist(d); draw(true);
   }
 
-  function move(dir) { jumpTo(Math.max(0, Math.min(3, d.step + dir))); }
+  function move(dir) { jumpTo(Math.max(0, Math.min(4, d.step + dir))); }
 
   function next() {
     const bad = validate(d.step);
     if (Object.keys(bad).length) { errors = bad; draw(); focusFirstError(); return; }
-    if (d.step < 3) return move(1);
+    if (d.step < 4) return move(1);
     submit();
   }
 
   function focusFirstError() {
     const el = stepHost.querySelector('[aria-invalid="true"], .has-error input, .has-error select, .has-error button');
     el?.focus();
+  }
+
+  // ---------- account (first step) ----------
+  function stepAccount() {
+    const email = h('input', { class: 'input', type: 'email', autocomplete: 'email', value: d.email, oninput: (e) => { d.email = e.target.value; persist(d); } });
+    const pw = h('input', { class: 'input', type: 'password', autocomplete: 'new-password', id: 'pw', oninput: (e) => { keep.pw = e.target.value; } });
+    const pw2 = h('input', { class: 'input', type: 'password', autocomplete: 'new-password', oninput: (e) => { keep.pw2 = e.target.value; } });
+    pw.value = keep.pw; pw2.value = keep.pw2;
+    return [
+      h('h1', { tabindex: -1, id: 'step-title' }, 'Create your account'),
+      h('p', { class: 'lede' }, 'Your email and password keep your profile safe so it is here when you come back. Your password is stored as a salted hash.'),
+      field('Email', email, { error: errors.email }),
+      h('div', { class: 'two-col' }, field('Password', pw, { hint: 'At least 8 characters.', error: errors.password }), field('Confirm password', pw2, { error: errors.confirm })),
+      h('p', { class: 'muted' }, 'Already have an account? ', h('a', { href: '#/signin' }, 'Sign in')),
+    ];
   }
 
   // ---------- step 1 ----------
@@ -220,44 +240,36 @@ export async function onboardingView() {
     const sec = (title, stepIdx, body) => h('section', { class: 'review-sec' }, h('div', { class: 'review-head' }, h('h2', {}, title), h('button', { class: 'link-btn', type: 'button', onclick: () => jumpTo(stepIdx) }, `Edit ${title.toLowerCase()}`)), body);
     const lv = (v) => cat.levels.find((l) => l.value === v)?.label || '';
     const st = (v) => cat.studyTimes.find((s) => s.value === v)?.label || 'Not given';
-    const email = h('input', { class: 'input', type: 'email', autocomplete: 'email', value: d.email, oninput: (e) => { d.email = e.target.value; persist(d); } });
-    const pw = h('input', { class: 'input', type: 'password', autocomplete: 'new-password', id: 'pw' });
-    const pw2 = h('input', { class: 'input', type: 'password', autocomplete: 'new-password' });
-    pw.value = keep.pw; pw2.value = keep.pw2;
-    step4.refs = { email, pw, pw2 };
     return [
       h('h1', { tabindex: -1, id: 'step-title' }, 'Review your profile'),
       h('p', { class: 'lede' }, 'Check everything below. You can edit any section, and change it again later from My Profile.'),
       errors.submit ? h('p', { class: 'form-error', role: 'alert' }, errors.submit) : null,
-      sec('Details', 0, h('dl', { class: 'kv' }, [['Name', d.name], ['College', d.college], ['Degree', `${d.degree}, ${cat.department}`], ['Year', `${d.year}${['st', 'nd', 'rd', 'th'][d.year - 1]} year`], ['Interests', d.interests.join(', ')]].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]))),
-      sec('Skills', 1, d.skills.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'table' }, h('thead', {}, h('tr', {}, ['Skill', 'Level (self-reported)', 'Studied', 'Confidence', 'Built a project'].map((x) => h('th', { scope: 'col' }, x)))), h('tbody', {}, d.skills.map((s) => h('tr', {}, h('th', { scope: 'row' }, s.name), h('td', {}, lv(s.level)), h('td', {}, st(s.studyTime)), h('td', {}, s.confidence ? `${s.confidence} of 5` : 'Not given'), h('td', {}, s.hasProject ? 'Yes' : 'No')))))) : h('p', { class: 'muted' }, 'No skills selected.')),
-      sec('Experience', 2, h('div', {}, h('h3', { class: 'h-sm' }, 'Projects'), d.projects.length ? h('ul', { class: 'plain' }, d.projects.map((p) => h('li', {}, p.title))) : h('p', { class: 'muted' }, 'None added.'), h('h3', { class: 'h-sm' }, 'Internships and certifications'), d.experience.length ? h('ul', { class: 'plain' }, d.experience.map((x) => h('li', {}, `${x.title}${x.org ? `, ${x.org}` : ''} (${x.type})`))) : h('p', { class: 'muted' }, 'None added.'))),
-      h('section', { class: 'review-sec' }, h('h2', {}, 'Create your account'), h('p', { class: 'muted' }, 'This saves your profile so it is here when you come back. Your password is stored as a salted hash.'),
-        field('Email', email, { error: errors.email }),
-        h('div', { class: 'two-col' }, field('Password', pw, { hint: 'At least 8 characters.', error: errors.password }), field('Confirm password', pw2, { error: errors.confirm }))),
+      sec('Account', 0, h('dl', { class: 'kv' }, [h('dt', {}, 'Email'), h('dd', {}, d.email), h('dt', {}, 'Password'), h('dd', {}, 'Set (hidden)')])),
+      sec('Details', 1, h('dl', { class: 'kv' }, [['Name', d.name], ['College', d.college], ['Degree', `${d.degree}, ${cat.department}`], ['Year', `${d.year}${['st', 'nd', 'rd', 'th'][d.year - 1]} year`], ['Interests', d.interests.join(', ')]].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]))),
+      sec('Skills', 2, d.skills.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'table' }, h('thead', {}, h('tr', {}, ['Skill', 'Level (self-reported)', 'Studied', 'Confidence', 'Built a project'].map((x) => h('th', { scope: 'col' }, x)))), h('tbody', {}, d.skills.map((s) => h('tr', {}, h('th', { scope: 'row' }, s.name), h('td', {}, lv(s.level)), h('td', {}, st(s.studyTime)), h('td', {}, s.confidence ? `${s.confidence} of 5` : 'Not given'), h('td', {}, s.hasProject ? 'Yes' : 'No')))))) : h('p', { class: 'muted' }, 'No skills selected.')),
+      sec('Experience', 3, h('div', {}, h('h3', { class: 'h-sm' }, 'Projects'), d.projects.length ? h('ul', { class: 'plain' }, d.projects.map((p) => h('li', {}, p.title))) : h('p', { class: 'muted' }, 'None added.'), h('h3', { class: 'h-sm' }, 'Internships and certifications'), d.experience.length ? h('ul', { class: 'plain' }, d.experience.map((x) => h('li', {}, `${x.title}${x.org ? `, ${x.org}` : ''} (${x.type})`))) : h('p', { class: 'muted' }, 'None added.'))),
     ];
   }
 
   // ---------- submit ----------
   async function submit() {
-    const { email, pw, pw2 } = step4.refs;
-    const e = {};
-    d.email = email.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email)) e.email = 'Enter a valid email address.';
-    if (pw.value.length < 8) e.password = 'Use at least 8 characters.';
-    else if (pw.value !== pw2.value) e.confirm = 'Passwords do not match.';
-    keep.pw = pw.value; keep.pw2 = pw2.value;
-    if (Object.keys(e).length) { errors = e; draw(false); focusFirstError(); return; }
+    const e = validate(0);
+    if (Object.keys(e).length) {
+      // for example after a page refresh, which deliberately forgets the password
+      d.step = 0; errors = { ...e, ...(e.password ? { password: 'Re-enter your password to finish (it is never saved in your browser).' } : {}) };
+      draw(true); focusFirstError(); return;
+    }
+    d.email = d.email.trim();
     nextBtn.disabled = true; backBtn.disabled = true; nextBtn.textContent = 'Saving';
-    const keepPw = pw.value;
+    const keepPw = keep.pw;
     try {
       await api('POST', '/auth/register', { email: d.email, password: keepPw, profile: { ...d, department: cat.department } });
     } catch (err) {
       nextBtn.disabled = false; backBtn.disabled = false; nextBtn.textContent = 'Generate My Career Roadmap';
       if (err instanceof ApiError && err.fields && Object.keys(err.fields).length) {
         const f = err.fields;
-        if (f.email || f.password) errors = { email: f.email, password: f.password };
-        else { errors = { ...f }; d.step = f.name || f.college || f.degree || f.year || f.interests ? 0 : f.skills ? 1 : 3; errors.submit = err.message; }
+        if (f.email || f.password) { d.step = 0; errors = { email: f.email, password: f.password }; }
+        else { errors = { ...f }; d.step = f.name || f.college || f.degree || f.year || f.interests ? 1 : f.skills ? 2 : 4; errors.submit = err.message; }
       } else errors = { submit: err.message };
       draw(true); return;
     }
@@ -278,15 +290,15 @@ export async function onboardingView() {
 
   // ---------- draw ----------
   function draw(animate = false) {
-    const builders = [step1, step2, step3, step4];
+    const builders = [stepAccount, step1, step2, step3, step4];
     const wrap = h('section', { class: 'onb-step' + (animate ? (direction > 0 ? ' in-fwd' : ' in-back') : '') }, builders[d.step]());
     stepHost.replaceChildren(wrap);
     paintRail();
     backBtn.hidden = d.step === 0;
-    nextBtn.textContent = d.step === 3 ? 'Generate My Career Roadmap' : 'Continue';
+    nextBtn.textContent = d.step === 4 ? 'Generate My Career Roadmap' : 'Continue';
     if (animate) { window.scrollTo(0, 0); wrap.querySelector('#step-title')?.focus({ preventScroll: true }); }
     const errCount = Object.keys(errors).filter((k) => k !== 'submit').length;
-    if (errCount && d.step < 3) wrap.prepend(h('p', { class: 'form-error', role: 'alert' }, `Please fix ${errCount} ${errCount === 1 ? 'field' : 'fields'} below.`));
+    if (errCount && d.step < 4) wrap.prepend(h('p', { class: 'form-error', role: 'alert' }, `Please fix ${errCount} ${errCount === 1 ? 'field' : 'fields'} below.`));
   }
 
   draw(false);

@@ -44,9 +44,22 @@ async function onboard(page, { name, college, year, email, interests = ['Web Dev
   await page.getByRole('link', { name: 'Start My Career Journey' }).first().click();
   await page.waitForURL(/#\/onboarding/);
 
-  // validation on empty step 1
+  // step 0: account first, with validation
+  await page.getByRole('heading', { name: 'Create your account' }).waitFor();
   await page.getByRole('button', { name: 'Continue' }).click();
-  expect(await page.getByText(/Please fix \d+ fields? below/).isVisible(), 'step 1 should show validation summary');
+  expect(await page.getByText('Enter a valid email address.').isVisible(), 'email validation');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password', { exact: true }).fill('password123');
+  await page.getByLabel('Confirm password').fill('different123');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  expect(await page.getByText('Passwords do not match.').isVisible(), 'confirm validation');
+  await page.getByLabel('Confirm password').fill('password123');
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  // validation on empty details step
+  await page.getByRole('heading', { name: 'Tell us about you' }).waitFor();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  expect(await page.getByText(/Please fix \d+ fields? below/).isVisible(), 'details step should show validation summary');
   expect(await page.getByText('Choose your college.').isVisible(), 'college error missing');
 
   await page.getByLabel('Full name').fill(name);
@@ -97,17 +110,8 @@ async function onboard(page, { name, college, year, email, interests = ['Web Dev
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('heading', { name: 'Review your profile' }).waitFor();
+  expect(await page.getByText(email).first().isVisible(), 'email missing in review');
   await shot(page, `onb4-${year}`);
-
-  // account validation then success
-  await page.getByRole('button', { name: 'Generate My Career Roadmap' }).click();
-  expect(await page.getByText('Enter a valid email address.').isVisible(), 'email validation');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password', { exact: true }).fill('password123');
-  await page.getByLabel('Confirm password').fill('different123');
-  await page.getByRole('button', { name: 'Generate My Career Roadmap' }).click();
-  expect(await page.getByText('Passwords do not match.').isVisible(), 'confirm validation');
-  await page.getByLabel('Confirm password').fill('password123');
   await page.getByRole('button', { name: 'Generate My Career Roadmap' }).click();
   try { await page.waitForURL(/#\/dashboard/, { timeout: 15000 }); }
   catch (e) { throw new Error(`no dashboard after submit; page says: ${(await page.locator('body').innerText()).replace(/\s+/g, ' ').slice(0, 300)}`); }
@@ -335,6 +339,10 @@ console.log('Onboarding with NMAMIT, 4th year');
 const b = await newPage();
 await step('draft survives refresh during onboarding', async () => {
   await b.page.goto(base + '/#/onboarding');
+  await b.page.getByLabel('Email').fill('draft@example.com');
+  await b.page.getByLabel('Password', { exact: true }).fill('password123');
+  await b.page.getByLabel('Confirm password').fill('password123');
+  await b.page.getByRole('button', { name: 'Continue' }).click();
   await b.page.getByLabel('Full name').fill('Ravi Kumar');
   await b.page.getByLabel('Current college').selectOption('NMAM Institute of Technology (NMAMIT)');
   await b.page.reload();
@@ -390,6 +398,10 @@ await step('onboarding is usable on mobile', async () => {
   await c.page.goto(base + '/#/onboarding');
   const o = await c.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(o <= 1, `onboarding overflows by ${o}px`);
+  await c.page.getByLabel('Email').fill('mobile@example.com');
+  await c.page.getByLabel('Password', { exact: true }).fill('password123');
+  await c.page.getByLabel('Confirm password').fill('password123');
+  await c.page.getByRole('button', { name: 'Continue' }).click();
   await c.page.getByLabel('Full name').fill('Mobile User');
   await c.page.getByLabel('Current college').selectOption('Sapthagiri NPS College');
   await c.page.getByLabel('Degree', { exact: true }).selectOption('B.Tech');
