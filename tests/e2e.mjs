@@ -48,6 +48,13 @@ async function onboard(page, { name, college, year, email, interests = ['Web Dev
   await page.getByRole('heading', { name: 'Create your account' }).waitFor();
   await page.getByRole('button', { name: 'Continue' }).click();
   expect(await page.getByText('Enter a valid email address.').isVisible(), 'email validation');
+  const pwBox = page.getByLabel('Password', { exact: true });
+  expect(await pwBox.getAttribute('type') === 'password', 'password should start hidden');
+  await pwBox.fill('password123');
+  await page.getByRole('button', { name: 'Show password' }).first().click();
+  expect(await pwBox.getAttribute('type') === 'text', 'show button should reveal password');
+  await page.getByRole('button', { name: 'Hide password' }).first().click();
+  expect(await pwBox.getAttribute('type') === 'password', 'hide button should mask password');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill('password123');
   await page.getByLabel('Confirm password').fill('different123');
@@ -138,7 +145,7 @@ console.log('Landing page');
   });
   await step('sign in rejects bad credentials', async () => {
     await page.getByLabel('Email').fill('nobody@example.com');
-    await page.getByLabel('Password').fill('wrongpass1');
+    await page.getByLabel('Password', { exact: true }).fill('wrongpass1');
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.getByText('Email or password is incorrect.').waitFor();
   });
@@ -322,7 +329,7 @@ await step('settings: password change, sign out, sign in with new password', asy
   await a.page.waitForURL(/#\/$|\/$/);
   await a.page.goto(base + '/#/signin');
   await a.page.getByLabel('Email').fill('asha@example.com');
-  await a.page.getByLabel('Password').fill('newpassword456');
+  await a.page.getByLabel('Password', { exact: true }).fill('newpassword456');
   await a.page.getByRole('button', { name: 'Sign in' }).click();
   await a.page.waitForURL(/#\/dashboard/);
   await a.page.getByRole('heading', { name: /Welcome, Asha/ }).waitFor();
@@ -373,7 +380,7 @@ for (const [label, vp] of [['mobile', { width: 375, height: 800 }], ['tablet', {
     await shot(c.page, `${label}-landing`);
     await c.page.goto(base + '/#/signin');
     await c.page.getByLabel('Email').fill('ravi@example.com');
-    await c.page.getByLabel('Password').fill('password123');
+    await c.page.getByLabel('Password', { exact: true }).fill('password123');
     await c.page.getByRole('button', { name: 'Sign in' }).click();
     await c.page.waitForURL(/#\/dashboard/);
     for (const hsh of ['dashboard', 'profile', 'skills', 'careers', 'gap', 'resources', 'roadmap', 'progress', 'settings']) {

@@ -101,6 +101,19 @@ export function resourceItem(res, st, onChange) {
   return root;
 }
 
+function withReveal(input) {
+  const btn = h('button', { class: 'reveal-btn', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Show password' }, 'Show');
+  btn.addEventListener('click', () => {
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.textContent = show ? 'Hide' : 'Show';
+    btn.setAttribute('aria-pressed', String(show));
+    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    input.focus();
+  });
+  return h('div', { class: 'pw-wrap' }, input, btn);
+}
+
 export function field(label, control, { hint, error, id } = {}) {
   const fid = id || control.id || `f-${Math.random().toString(36).slice(2, 8)}`;
   control.id = fid;
@@ -111,7 +124,7 @@ export function field(label, control, { hint, error, id } = {}) {
   return h('div', { class: 'field' + (error ? ' has-error' : '') },
     h('label', { for: fid }, label),
     hint ? h('p', { class: 'hint', id: `${fid}-hint` }, hint) : null,
-    control,
+    control.type === 'password' ? withReveal(control) : control,
     error ? h('p', { class: 'error', id: errId }, error) : null);
 }
 

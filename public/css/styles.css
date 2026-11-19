@@ -502,3 +502,9 @@ img, svg { max-width: 100%; }
 /* Fit pills must keep their natural size inside flex rows */
 .rank-list li .pill, .career-title .pill { flex: none; align-self: flex-start; }
 .rank-list li > div { min-width: 0; }
+
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-right: 70px; }
+.reveal-btn { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); min-height: 32px; padding: 0 10px; background: transparent; border: 0; border-radius: 6px; color: var(--muted, #9aa3af); font: 600 0.8rem var(--font); cursor: pointer; }
+.reveal-btn:hover { color: var(--text); }
+.reveal-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
