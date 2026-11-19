@@ -280,6 +280,21 @@ test('ALLOWED_ORIGINS lets a configured frontend write, others stay blocked', as
   } finally { delete process.env.ALLOWED_ORIGINS; }
 });
 
+test('admin user list is hidden without a token and protected with one', async () => {
+  const get = (auth) => fetch(base + '/api/admin/users', { headers: auth ? { authorization: auth } : {} });
+  assert.equal((await get()).status, 404, 'disabled when ADMIN_TOKEN is unset');
+  process.env.ADMIN_TOKEN = 'test-admin-token-1234567890';
+  try {
+    assert.equal((await get()).status, 401);
+    assert.equal((await get('Bearer wrong')).status, 401);
+    const ok = await get('Bearer test-admin-token-1234567890');
+    assert.equal(ok.status, 200);
+    const body = await ok.json();
+    assert.ok(body.count >= 1 && body.users[0].email.includes('@'));
+    assert.ok(!JSON.stringify(body).match(/password|salt|hash/i), 'no secrets in response');
+  } finally { delete process.env.ADMIN_TOKEN; }
+});
+
 test('AI path validates model output and labels its source', async () => {
   const realFetch = globalThis.fetch;
   process.env.ANTHROPIC_API_KEY = 'test-key-not-real';

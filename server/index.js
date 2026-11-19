@@ -1,5 +1,6 @@
 // CareerPath AI server: JSON API plus static frontend, no third-party dependencies.
 import http from 'node:http';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { join, extname, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -325,6 +326,22 @@ export function createApp({ db, secureCookies = false } = {}) {
     res.setHeader('Set-Cookie', cookieHeader('', 0, secureCookies));
     return { ok: true };
   });
+
+  // ---- Admin (read-only list of registered accounts) ----
+  // Disabled unless ADMIN_TOKEN is set. Never returns password data.
+  const sha = (t) => createHash('sha256').update(String(t)).digest();
+  route('GET', '/api/admin/users', ({ req }) => {
+    const token = process.env.ADMIN_TOKEN;
+    if (!token || token.length < 16) throw new HttpError(404, 'Not found.');
+    const key = `admin|${clientIp(req)}`;
+    if (tooManyAttempts(key)) throw new HttpError(429, 'Too many attempts. Wait a few minutes and try again.');
+    const given = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!timingSafeEqual(sha(given), sha(token))) throw new HttpError(401, 'Invalid admin token.');
+    clearAttempts(key);
+    const rows = db.prepare('SELECT u.id, u.email, u.created_at AS createdAt, p.data FROM users u LEFT JOIN profiles p ON p.user_id = u.id ORDER BY u.id DESC').all();
+    const users = rows.map((r) => { let pr = {}; try { pr = JSON.parse(r.data || '{}'); } catch { /* ignore */ } return { id: r.id, email: r.email, createdAt: r.createdAt, name: pr.name || '', college: pr.college || '', year: pr.year || null }; });
+    return { count: users.length, users };
+  }, { auth: false });
 
   // ---- HTTP plumbing ----
   async function readBody(req) {

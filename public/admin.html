@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin | CareerPath AI</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <main class="auth-card" style="max-width: 860px; padding: 40px 20px;">
+    <h1>Registered accounts</h1>
+    <p class="lede">Only visible with the admin token set on the server. The token stays in this tab and is never saved.</p>
+    <form id="f" class="auth-form" novalidate>
+      <div class="field"><label for="t">Admin token</label><input class="input" id="t" type="password" autocomplete="off"></div>
+      <p class="error" id="err" role="alert"></p>
+      <button class="btn btn-primary" type="submit">Show accounts</button>
+    </form>
+    <div id="out"></div>
+  </main>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
