@@ -30,6 +30,12 @@ const SECURITY_HEADERS = {
 
 const now = () => new Date().toISOString();
 
+// Origins (for example the Vercel frontend) allowed to send writes to this API. Comma separated in ALLOWED_ORIGINS.
+const allowedOrigins = () => (process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/\/$/, '')).filter(Boolean);
+
+// Behind a proxy (Render, Vercel) the socket address is the proxy, so read the forwarded address when TRUST_PROXY=true.
+const clientIp = (req) => (process.env.TRUST_PROXY === 'true' ? String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() : '') || req.socket.remoteAddress;
+
 export function createApp({ db, secureCookies = false } = {}) {
   const routes = [];
   const route = (method, path, handler, { auth = true } = {}) => {
@@ -130,7 +136,7 @@ export function createApp({ db, secureCookies = false } = {}) {
 
   route('POST', '/api/auth/login', ({ body, req, res }) => {
     const email = String(body.email || '').trim().toLowerCase();
-    const key = `${req.socket.remoteAddress}|${email}`;
+    const key = `${clientIp(req)}|${email}`;
     if (tooManyAttempts(key)) throw new HttpError(429, 'Too many attempts. Wait a few minutes and try again.');
     const row = db.prepare('SELECT id, email, password_hash, salt FROM users WHERE email = ?').get(email);
     const ok = row && typeof body.password === 'string' && verifyPassword(body.password, row.salt, row.password_hash);
@@ -349,7 +355,7 @@ export function createApp({ db, secureCookies = false } = {}) {
     }
     if (method !== 'GET') {
       const origin = req.headers.origin;
-      if (origin && new URL(origin).host !== req.headers.host) throw new HttpError(403, 'Cross-origin request blocked.');
+      if (origin && new URL(origin).host !== req.headers.host && !allowedOrigins().includes(origin)) throw new HttpError(403, 'Cross-origin request blocked.');
       if (!(req.headers['content-type'] || '').includes('application/json') && Number(req.headers['content-length'] || 0) > 0) throw new HttpError(415, 'Use application/json.');
     }
     let user = null;

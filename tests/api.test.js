@@ -271,6 +271,15 @@ test('cross-origin writes and bad paths are rejected', async () => {
   assert.ok(!body.includes('root:'));
 });
 
+test('ALLOWED_ORIGINS lets a configured frontend write, others stay blocked', async () => {
+  process.env.ALLOWED_ORIGINS = 'https://careerpath.vercel.app/';
+  try {
+    const send = (origin) => fetch(base + '/api/goals', { method: 'POST', headers: { 'content-type': 'application/json', origin, cookie }, body: JSON.stringify({ title: 'Origin test goal' }) });
+    assert.equal((await send('https://careerpath.vercel.app')).status, 201);
+    assert.equal((await send('https://evil.example')).status, 403);
+  } finally { delete process.env.ALLOWED_ORIGINS; }
+});
+
 test('AI path validates model output and labels its source', async () => {
   const realFetch = globalThis.fetch;
   process.env.ANTHROPIC_API_KEY = 'test-key-not-real';

@@ -1,0 +1,20 @@
+# Render blueprint for the CareerPath AI backend.
+services:
+  - type: web
+    name: careerpath-ai-api
+    runtime: node
+    plan: free
+    buildCommand: "echo no build step"
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_PATH
+        value: data/careerpath.db
+      - key: ALLOWED_ORIGINS
+        sync: false
