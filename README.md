@@ -2,6 +2,10 @@
 
 An AI-assisted career guidance platform for Computer Science Engineering (CSE) students. Students describe their college, year, interests and skills, then get ranked career recommendations with explanations, a skill gap analysis, curated learning resources, a five-phase roadmap and persistent progress tracking.
 
+## Live demo
+
+A browser-only demo is published with GitHub Pages from the `docs/` folder. It runs the same career data and rule-based engine as the real server, but keeps one account's data in your own browser instead of a database. Use `npm start` for the full app.
+
 ## Problem statement
 
 Engineering students often know some technologies but cannot tell which careers those skills point to, what is missing for a given role, or what to learn next. Generic advice ignores their year, their actual skill levels and what they have built. CareerPath AI turns a student's real profile into specific, explainable guidance.
